@@ -1,94 +1,93 @@
-/* CineHD Hindi Streaming — player.js
-   Vercel proxy at /api/proxy?url=ENCODED_URL
-   Hindi-first server list
+/* CineHD Hindi Streaming — player.js v2
+   Hindi-first with working multi-language embed servers
 */
 
-const TMDB_KEY  = "8265bd1679663a7ea12ac168da84d2e8";
-const TMDB      = "https://api.themoviedb.org/3";
-const IMG       = "https://image.tmdb.org/t/p/w342";
-const PROXY     = "/api/proxy?url="; // Vercel serverless proxy
+const TMDB_KEY = "8265bd1679663a7ea12ac168da84d2e8";
+const TMDB     = "https://api.themoviedb.org/3";
+const IMG      = "https://image.tmdb.org/t/p/w342";
 
-// ── Servers — Hindi first, all routed via Vercel proxy
+// ── Language code map for embed URLs
+const LANG_MAP = {
+  hindi:   { hl:"hi", label:"Hindi",   flag:"🇮🇳" },
+  tamil:   { hl:"ta", label:"Tamil",   flag:"🇮🇳" },
+  telugu:  { hl:"te", label:"Telugu",  flag:"🇮🇳" },
+  english: { hl:"en", label:"English", flag:"🇬🇧" },
+  french:  { hl:"fr", label:"French",  flag:"🇫🇷" },
+  spanish: { hl:"es", label:"Spanish", flag:"🇪🇸" },
+  arab:    { hl:"ar", label:"Arabic",  flag:"🇸🇦" },
+  brazil:  { hl:"pt", label:"Brazil",  flag:"🇧🇷" },
+  russian: { hl:"ru", label:"Russian", flag:"🇷🇺" },
+  german:  { hl:"de", label:"German",  flag:"🇩🇪" },
+  italian: { hl:"it", label:"Italian", flag:"🇮🇹" },
+  japan:   { hl:"ja", label:"Japan",   flag:"🇯🇵" },
+  korean:  { hl:"ko", label:"Korean",  flag:"🇰🇷" },
+  chinese: { hl:"zh", label:"Chinese", flag:"🇨🇳" },
+  turkish: { hl:"tr", label:"Turkish", flag:"🇹🇷" },
+  thai:    { hl:"th", label:"Thai",    flag:"🇹🇭" },
+};
+
+// ── Servers — direct iframe (no proxy needed)
+// multiembed.mov supports &hl= for language selection
+// vidsrc.xyz supports &ds_lang= for dubbed language
 const SERVERS = [
   {
-    id:"vs_hindi", name:"VidSrc Hindi", badge:"🇮🇳", hindi:true,
-    url:({id,type,s,e}) => type==="tv"
-      ? `https://vidsrc.to/embed/tv/${id}/${s}/${e}`
-      : `https://vidsrc.to/embed/movie/${id}`,
+    id:"multi_hi", name:"MbPly Multi-Lang", badge:"🇮🇳", primary:true,
+    url:({id,type,s,e,hl}) => type==="tv"
+      ? `https://multiembed.mov/?video_id=${id}&tmdb=1&s=${s}&e=${e}&hl=${hl}`
+      : `https://multiembed.mov/?video_id=${id}&tmdb=1&hl=${hl}`,
   },
   {
-    id:"ae_hindi", name:"AutoEmbed Hindi", badge:"🇮🇳", hindi:true,
-    url:({id,type,s,e}) => type==="tv"
-      ? `https://player.autoembed.co/embed/tv/${id}/${s}/${e}`
-      : `https://player.autoembed.co/embed/movie/${id}`,
+    id:"vidsrc_xyz", name:"ZetPly Multi-Lang", badge:"HD",
+    url:({id,type,s,e,hl}) => type==="tv"
+      ? `https://vidsrc.xyz/embed/tv?tmdb=${id}&season=${s}&episode=${e}&ds_lang=${hl}`
+      : `https://vidsrc.xyz/embed/movie?tmdb=${id}&ds_lang=${hl}`,
   },
   {
-    id:"es_hindi", name:"EmbedSu Hindi", badge:"🇮🇳", hindi:true,
+    id:"embed_su", name:"OrVid Multi-Lang", badge:"HD",
     url:({id,type,s,e}) => type==="tv"
       ? `https://embed.su/embed/tv/${id}/${s}/${e}`
       : `https://embed.su/embed/movie/${id}`,
   },
   {
-    id:"vl_hindi", name:"VidLink Hindi", badge:"🇮🇳", hindi:true,
+    id:"vidlink", name:"VidLink HD", badge:"4K",
     url:({id,type,s,e}) => type==="tv"
-      ? `https://vidlink.pro/tv/${id}/${s}/${e}?primaryColor=f5a623&autoplay=true`
-      : `https://vidlink.pro/movie/${id}?primaryColor=f5a623&autoplay=true`,
+      ? `https://vidlink.pro/tv/${id}/${s}/${e}?autoplay=true`
+      : `https://vidlink.pro/movie/${id}?autoplay=true`,
   },
   {
-    id:"vs2", name:"VidSrc.me Multi", badge:"HD",
+    id:"vidsrc_me", name:"VidSrc.me", badge:"HD",
     url:({id,type,s,e}) => type==="tv"
       ? `https://vidsrc.me/embed/tv?tmdb=${id}&season=${s}&episode=${e}`
       : `https://vidsrc.me/embed/movie?tmdb=${id}`,
   },
   {
-    id:"2emb", name:"2Embed Multi-Lang", badge:"HD",
+    id:"twoembed", name:"2Embed", badge:"HD",
     url:({id,type,s,e}) => type==="tv"
       ? `https://www.2embed.cc/embedtv/${id}&s=${s}&e=${e}`
       : `https://www.2embed.cc/embed/${id}`,
   },
   {
-    id:"multi", name:"MultiEmbed 4K", badge:"4K",
+    id:"autoembed", name:"AutoEmbed", badge:"HD",
     url:({id,type,s,e}) => type==="tv"
-      ? `https://multiembed.mov/?video_id=${id}&tmdb=1&s=${s}&e=${e}`
-      : `https://multiembed.mov/?video_id=${id}&tmdb=1`,
+      ? `https://player.autoembed.co/embed/tv/${id}/${s}/${e}`
+      : `https://player.autoembed.co/embed/movie/${id}`,
   },
   {
-    id:"smashy", name:"SmashyStream", badge:"HD",
+    id:"smash", name:"SmashyStream", badge:"HD",
     url:({id}) => `https://embed.smashystream.com/playere.php?tmdb=${id}`,
   },
 ];
 
 const SCAN_NAMES = [
-  "VidSrc-HI","AutoEmbed","EmbedSu","VidLink",
-  "2Embed","MultiEmbed","SmashyStream","VidSrc.me",
+  "MbPly","ZetPly","OrVid","VidLink",
+  "2Embed","AutoEmbed","SmashyStream","VidSrc.me",
   "VidSrc.xyz","MovPlay","CineHD","StreamX",
-];
-
-const LANGS = [
-  {code:"hindi",   name:"Hindi",    flag:"🇮🇳", hi:true,  primary:"Main Language"},
-  {code:"tamil",   name:"Tamil",    flag:"🇮🇳", hi:true,  primary:""},
-  {code:"telugu",  name:"Telugu",   flag:"🇮🇳", hi:true,  primary:""},
-  {code:"english", name:"English",  flag:"🇬🇧", hi:false, primary:""},
-  {code:"french",  name:"French",   flag:"🇫🇷", hi:false, primary:""},
-  {code:"spanish", name:"Spanish",  flag:"🇪🇸", hi:false, primary:""},
-  {code:"arab",    name:"Arab",     flag:"🇸🇦", hi:false, primary:""},
-  {code:"brazil",  name:"Brazil",   flag:"🇧🇷", hi:false, primary:""},
-  {code:"russian", name:"Russian",  flag:"🇷🇺", hi:false, primary:""},
-  {code:"german",  name:"German",   flag:"🇩🇪", hi:false, primary:""},
-  {code:"italian", name:"Italian",  flag:"🇮🇹", hi:false, primary:""},
-  {code:"japan",   name:"Japan",    flag:"🇯🇵", hi:false, primary:""},
-  {code:"polish",  name:"Polish",   flag:"🇵🇱", hi:false, primary:""},
-  {code:"thai",    name:"Thai",     flag:"🇹🇭", hi:false, primary:""},
-  {code:"turkish", name:"Turkish",  flag:"🇹🇷", hi:false, primary:""},
-  {code:"korean",  name:"Korean",   flag:"🇰🇷", hi:false, primary:""},
-  {code:"chinese", name:"Chinese",  flag:"🇨🇳", hi:false, primary:""},
-  {code:"french2", name:"French 2", flag:"🇫🇷", hi:false, primary:""},
 ];
 
 // ── State
 let media   = null;
-let selSvr  = "vs_hindi";
-let selLang = "hindi";
+let selSvr  = "multi_hi";   // default: multiembed with Hindi
+let selLang = "hindi";       // default: Hindi
 let bm      = false;
 let scanT   = null;
 let wl      = safeGet("wl",[]);
@@ -97,31 +96,38 @@ function safeGet(k,d){try{return JSON.parse(localStorage.getItem(k))||d;}catch{r
 function safeSet(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch{}}
 
 // ── Page / Modal helpers
-const $   = id => document.getElementById(id);
+const $    = id => document.getElementById(id);
 const show = id => { document.querySelectorAll(".page").forEach(p=>p.classList.remove("active")); $(id).classList.add("active"); scrollTo(0,0); };
 const open = id => $(id).classList.add("open");
 const shut = id => $(id).classList.remove("open");
 
-// ── Build embed URL through Vercel proxy
-function embedUrl(srv, m) {
-  const raw = srv.url({ id:m.id, type:m.type, s:m.season||1, e:m.episode||1 });
-  return PROXY + encodeURIComponent(raw);
+// ── Build embed URL — DIRECT iframe, no proxy
+function embedUrl(srv, m, langCode) {
+  const hl = LANG_MAP[langCode]?.hl || "hi";
+  return srv.url({
+    id: m.id,
+    type: m.type,
+    s: m.season  || 1,
+    e: m.episode || 1,
+    hl,
+  });
 }
 
 // ── Load server into iframe
-function loadServer(id) {
+function loadServer(srvId, lang) {
   if (!media) return;
-  const srv = SERVERS.find(s=>s.id===id);
+  const srv = SERVERS.find(s => s.id === srvId);
   if (!srv) return;
-  selSvr = id;
+  selSvr  = srvId;
+  selLang = lang || selLang;
 
-  $("vOverlay").style.display = "none";
-  $("vLoading").style.display = "flex";
-  $("loadText").textContent   = `Loading ${srv.name}...`;
+  $("vOverlay").style.display  = "none";
+  $("vLoading").style.display  = "flex";
+  $("loadText").textContent    = `Loading ${srv.name}...`;
 
-  $("videoFrame").src = embedUrl(srv, media);
+  $("videoFrame").src = embedUrl(srv, media, selLang);
 
-  setTimeout(()=>{ $("vLoading").style.display="none"; }, 4000);
+  setTimeout(() => { $("vLoading").style.display = "none"; }, 5000);
   shut("serverModal");
   buildServers();
 }
@@ -129,49 +135,50 @@ function loadServer(id) {
 // ── Open player
 async function openPlayer(tmdb_id, type) {
   show("playerPage");
-  $("videoFrame").src      = "about:blank";
+  $("videoFrame").src           = "about:blank";
   $("vOverlay").style.display   = "flex";
   $("vLoading").style.display   = "none";
-  $("mTitle").textContent  = "Loading...";
-  $("nwTitle").textContent = "Loading...";
-  $("overview").textContent= "";
+  $("mTitle").textContent       = "Loading...";
+  $("nwTitle").textContent      = "Loading...";
+  $("overview").textContent     = "";
 
   try {
-    const ep  = type==="tv"?"tv":"movie";
+    const ep  = type === "tv" ? "tv" : "movie";
     const res = await fetch(`${TMDB}/${ep}/${tmdb_id}?api_key=${TMDB_KEY}`);
     const d   = await res.json();
 
-    const title  = d.title||d.name||"Unknown";
-    const year   = (d.release_date||d.first_air_date||"").slice(0,4);
+    const title  = d.title || d.name || "Unknown";
+    const year   = (d.release_date || d.first_air_date || "").slice(0,4);
     const genres = (d.genres||[]).map(g=>g.name).join(", ").toUpperCase();
 
     media = { id:tmdb_id, type, title, year, genres, season:1, episode:1 };
 
-    $("mTitle").textContent   = title;
-    $("mMeta").textContent    = `${type==="tv"?"SERIES":"MOVIE"}${genres?" • "+genres:""}`;
-    $("nwTitle").textContent  = title;
-    $("overview").textContent = d.overview||"";
-    $("langTitle").textContent= title;
-    $("langMeta").textContent = type==="tv"?"SERIES":"MOVIE";
-    $("scanTitle").textContent= title;
+    $("mTitle").textContent    = title;
+    $("mMeta").textContent     = `${type==="tv"?"SERIES":"MOVIE"}${genres?" • "+genres:""}`;
+    $("nwTitle").textContent   = title;
+    $("overview").textContent  = d.overview || "";
+    $("langTitle").textContent = title;
+    $("langMeta").textContent  = type==="tv"?"SERIES":"MOVIE";
+    $("scanTitle").textContent = title;
 
-    bm = wl.some(w=>w.id===tmdb_id);
+    bm = wl.some(w => w.id === tmdb_id);
     $("bmBtn").classList.toggle("on", bm);
 
-    loadServer(selSvr);
+    // Auto-load Hindi server
+    loadServer(selSvr, selLang);
   } catch(e) {
-    $("mTitle").textContent  = "Load Error";
-    $("overview").textContent= "Internet connection check करें।";
+    $("mTitle").textContent   = "Load Error";
+    $("overview").textContent = "Internet connection check करें।";
   }
 }
 
 // ── Server list HTML
 function buildServers() {
-  $("serverList").innerHTML = SERVERS.map(s=>`
+  $("serverList").innerHTML = SERVERS.map(s => `
     <div class="s-item ${s.id===selSvr?"sel":""}" onclick="loadServer('${s.id}')">
       <div class="s-radio"><div class="s-dot"></div></div>
       <div class="s-info">
-        <div class="s-name">${s.name}${s.hindi?'<span class="hindi-tag">हिंदी</span>':""}</div>
+        <div class="s-name">${s.name}${s.primary?'<span class="hindi-tag">हिंदी</span>':""}</div>
         <div class="s-status">● Ready</div>
       </div>
       <span class="s-badge">${s.badge}</span>
@@ -180,22 +187,30 @@ function buildServers() {
 
 // ── Language grid HTML
 function buildLangs() {
-  $("langGrid").innerHTML = LANGS.map(l=>`
-    <div class="l-item ${l.code===selLang?"on":""} ${l.hi?"hi-first":""}" onclick="pickLang('${l.code}')">
+  $("langGrid").innerHTML = Object.entries(LANG_MAP).map(([code, l]) => `
+    <div class="l-item ${code===selLang?"on":""} ${["hindi","tamil","telugu"].includes(code)?"hi-first":""}"
+         onclick="pickLang('${code}')">
       <span class="l-flag">${l.flag}</span>
-      <span class="l-name">${l.name}</span>
-      ${l.primary?`<span class="l-primary">🇮🇳 Main</span>`:""}
+      <span class="l-name">${l.label}</span>
+      ${code==="hindi"?'<span class="l-primary">🇮🇳 Main</span>':""}
     </div>`).join("");
 }
 
+// ── Pick language → reload with same server but new lang
 function pickLang(code) {
   selLang = code;
   buildLangs();
-  // Switch to Hindi server automatically
-  if ((code==="hindi"||code==="tamil"||code==="telugu") && media) {
-    setTimeout(()=>{ loadServer("vs_hindi"); shut("langModal"); }, 350);
+  if (media) {
+    setTimeout(() => {
+      // For languages with hl support, use multiembed
+      // For others, keep current server
+      const useMulti = ["hindi","tamil","telugu","english","french","spanish","arab","brazil","russian","german","italian","japan","korean","chinese","turkish","thai"].includes(code);
+      const srvId = useMulti ? "multi_hi" : selSvr;
+      loadServer(srvId, code);
+      shut("langModal");
+    }, 300);
   } else {
-    setTimeout(()=>shut("langModal"), 350);
+    setTimeout(() => shut("langModal"), 300);
   }
 }
 
@@ -204,21 +219,21 @@ function runScan() {
   if (scanT) clearInterval(scanT);
   let done=0, ci=0;
   const T=41;
-  $("progFill").style.width = "0%";
-  $("analyzed").textContent = "0 ANALYZED";
-  $("remaining").textContent= T+" REMAINING";
-  $("scanStatus").textContent="Scanning high-speed servers...";
-  $("scanGrid").innerHTML   = "";
+  $("progFill").style.width  = "0%";
+  $("analyzed").textContent  = "0 ANALYZED";
+  $("remaining").textContent = T+" REMAINING";
+  $("scanStatus").textContent= "Scanning high-speed servers...";
+  $("scanGrid").innerHTML    = "";
 
-  scanT = setInterval(()=>{
+  scanT = setInterval(() => {
     done++;
-    $("progFill").style.width = Math.round(done/T*100)+"%";
+    $("progFill").style.width  = Math.round(done/T*100)+"%";
     $("analyzed").textContent  = done+" ANALYZED";
     $("remaining").textContent = Math.max(0,T-done)+" REMAINING";
     if (done%3===0 && ci<SCAN_NAMES.length) {
-      const c=document.createElement("div");
-      c.className="sc-card";
-      c.innerHTML=`<div class="sc-check">✓</div><div class="sc-name">${SCAN_NAMES[ci]}</div>`;
+      const c = document.createElement("div");
+      c.className = "sc-card";
+      c.innerHTML = `<div class="sc-check">✓</div><div class="sc-name">${SCAN_NAMES[ci]}</div>`;
       $("scanGrid").appendChild(c);
       ci++;
     }
@@ -230,7 +245,7 @@ function runScan() {
 async function tmdbSearch(q) {
   const r = await fetch(`${TMDB}/search/multi?api_key=${TMDB_KEY}&query=${encodeURIComponent(q)}&include_adult=false`);
   const d = await r.json();
-  return (d.results||[]).filter(x=>x.media_type==="movie"||x.media_type==="tv");
+  return (d.results||[]).filter(x => x.media_type==="movie"||x.media_type==="tv");
 }
 
 async function tmdbCat(cat) {
@@ -251,10 +266,10 @@ function renderGrid(items, label) {
   e.style.display="none";
   if (!items.length){ g.innerHTML=""; e.style.display="flex"; return; }
 
-  const lb=label?`<div class="sec-title" style="grid-column:1/-1">${label}</div>`:"";
-  const BLANK=`data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='150'%3E%3Crect fill='%23181d2c' width='100' height='150'/%3E%3Ctext fill='%237a8499' x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-size='26'%3E🎬%3C/text%3E%3C/svg%3E`;
+  const lb = label ? `<div class="sec-title" style="grid-column:1/-1">${label}</div>` : "";
+  const BLANK = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='150'%3E%3Crect fill='%23181d2c' width='100' height='150'/%3E%3Ctext fill='%237a8499' x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-size='26'%3E🎬%3C/text%3E%3C/svg%3E`;
 
-  g.innerHTML = lb + items.map(x=>{
+  g.innerHTML = lb + items.map(x => {
     const title = (x.title||x.name||"Unknown").replace(/"/g,"&quot;");
     const year  = (x.release_date||x.first_air_date||"").slice(0,4);
     const poster= x.poster_path ? IMG+x.poster_path : BLANK;
@@ -289,20 +304,20 @@ async function loadCat(cat) {
 let sTimer;
 $("searchInput").addEventListener("input", function(){
   clearTimeout(sTimer);
-  const q=this.value.trim();
+  const q = this.value.trim();
   if(!q){ loadCat("trending"); return; }
-  sTimer=setTimeout(async()=>{ showSpinner(); renderGrid(await tmdbSearch(q)); }, 400);
+  sTimer = setTimeout(async()=>{ showSpinner(); renderGrid(await tmdbSearch(q)); }, 400);
 });
 $("searchBtn").addEventListener("click", async()=>{
-  const q=$("searchInput").value.trim();
+  const q = $("searchInput").value.trim();
   if(!q) return;
   showSpinner(); renderGrid(await tmdbSearch(q));
 });
-$("searchInput").addEventListener("keydown",e=>{ if(e.key==="Enter") $("searchBtn").click(); });
+$("searchInput").addEventListener("keydown", e=>{ if(e.key==="Enter") $("searchBtn").click(); });
 
 // Category tabs
 document.querySelectorAll(".cat-tab").forEach(t=>{
-  t.addEventListener("click",function(){
+  t.addEventListener("click", function(){
     document.querySelectorAll(".cat-tab").forEach(x=>x.classList.remove("active"));
     this.classList.add("active");
     loadCat(this.dataset.cat);
@@ -311,13 +326,12 @@ document.querySelectorAll(".cat-tab").forEach(t=>{
 
 // Bottom nav (home page)
 document.querySelectorAll("#searchPage .nav-item[data-cat]").forEach(n=>{
-  n.addEventListener("click",function(e){
+  n.addEventListener("click", function(e){
     e.preventDefault();
     document.querySelectorAll("#searchPage .nav-item").forEach(x=>x.classList.remove("active"));
     this.classList.add("active");
-    const cat=this.dataset.cat;
+    const cat = this.dataset.cat;
     if(cat) loadCat(cat);
-    // Sync tab highlight
     document.querySelectorAll(".cat-tab").forEach(t=>{
       t.classList.toggle("active", t.dataset.cat===cat);
     });
@@ -325,35 +339,36 @@ document.querySelectorAll("#searchPage .nav-item[data-cat]").forEach(n=>{
 });
 
 // Player buttons
-$("btnServers").addEventListener("click",()=>{ buildServers(); open("serverModal"); });
-$("closeServer").addEventListener("click",()=>shut("serverModal"));
-$("btnLang").addEventListener("click",()=>{ buildLangs(); open("langModal"); });
-$("closeLang").addEventListener("click",()=>shut("langModal"));
-$("btnScan").addEventListener("click",()=>{ open("scanModal"); runScan(); });
+$("btnServers").addEventListener("click", ()=>{ buildServers(); open("serverModal"); });
+$("closeServer").addEventListener("click", ()=>shut("serverModal"));
+$("btnLang").addEventListener("click", ()=>{ buildLangs(); open("langModal"); });
+$("closeLang").addEventListener("click", ()=>shut("langModal"));
+$("btnScan").addEventListener("click", ()=>{ open("scanModal"); runScan(); });
 
 // Alert
-$("alertClose").addEventListener("click",()=>$("alertBar").classList.add("hidden"));
+$("alertClose").addEventListener("click", ()=>$("alertBar").classList.add("hidden"));
 
 // Bookmark
-$("bmBtn").addEventListener("click",function(){
+$("bmBtn").addEventListener("click", function(){
   if(!media) return;
-  bm=!bm;
-  this.classList.toggle("on",bm);
+  bm = !bm;
+  this.classList.toggle("on", bm);
   if(bm) wl.push({id:media.id,type:media.type,title:media.title});
-  else    wl=wl.filter(w=>w.id!==media.id);
-  safeSet("wl",wl);
+  else    wl = wl.filter(w=>w.id!==media.id);
+  safeSet("wl", wl);
 });
 
 // Back
-$("backBtn").addEventListener("click",()=>{ $("videoFrame").src="about:blank"; show("searchPage"); });
-$("playerHome").addEventListener("click",e=>{ e.preventDefault(); $("videoFrame").src="about:blank"; show("searchPage"); });
+$("backBtn").addEventListener("click", ()=>{ $("videoFrame").src="about:blank"; show("searchPage"); });
+$("playerHome").addEventListener("click", e=>{ e.preventDefault(); $("videoFrame").src="about:blank"; show("searchPage"); });
 
 // Close overlays on backdrop click
 ["serverModal","scanModal","langModal"].forEach(id=>{
-  $(id).addEventListener("click",function(e){
+  $(id).addEventListener("click", function(e){
     if(e.target===this){ if(id==="scanModal"&&scanT) clearInterval(scanT); shut(id); }
   });
 });
 
-// ── Init
+// ── Init — load Hindi trending by default
 loadCat("trending");
+     
