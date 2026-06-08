@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>CineHD – Hindi Movies & Web Series</title>
+  <title>CineHD – Movies, Series & Anime</title>
   <link rel="stylesheet" href="player.css"/>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
 </head>
@@ -15,7 +15,7 @@
     <div class="logo">Cine<span>HD</span></div>
     <div class="hindi-badge">🇮🇳 Hindi</div>
     <div class="header-search">
-      <input type="text" id="searchInput" placeholder="Search Hindi movies, series..." autocomplete="off"/>
+      <input type="text" id="searchInput" placeholder="Search movies, series, anime..." autocomplete="off"/>
       <button id="searchBtn">🔍</button>
     </div>
   </header>
@@ -25,6 +25,7 @@
     <button class="cat-tab" data-cat="bollywood">🎬 Bollywood</button>
     <button class="cat-tab" data-cat="webseries">📺 Web Series</button>
     <button class="cat-tab" data-cat="dubbed">🌐 Dubbed</button>
+    <button class="cat-tab" data-cat="anime">🎌 Anime</button>
   </div>
 
   <div class="results-wrap">
@@ -39,7 +40,7 @@
     <a href="#" class="nav-item" id="navSearch"><span>🔍</span><span>Search</span></a>
     <a href="#" class="nav-item" data-cat="bollywood"><span>🎬</span><span>Movies</span></a>
     <a href="#" class="nav-item" data-cat="webseries"><span>📺</span><span>Series</span></a>
-    <a href="#" class="nav-item" data-cat="dubbed"><span>✏️</span><span>Dubbed</span></a>
+    <a href="#" class="nav-item" data-cat="anime"><span>🎌</span><span>Anime</span></a>
   </nav>
 </div>
 
@@ -60,7 +61,6 @@
     <button id="alertClose">✕</button>
   </div>
 
-  <!-- VIDEO -->
   <div class="video-wrap">
     <div class="now-watching">Now Watching: <span id="nwTitle">—</span></div>
     <div class="video-box">
@@ -69,12 +69,10 @@
         referrerpolicy="no-referrer"
         sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-presentation allow-top-navigation-by-user-activation">
       </iframe>
-      <!-- Placeholder -->
       <div class="v-overlay" id="vOverlay">
         <div class="v-play">▶</div>
         <p>Server select करें</p>
       </div>
-      <!-- Loading -->
       <div class="v-overlay" id="vLoading" style="display:none">
         <div class="spin"></div>
         <p id="loadText">Loading...</p>
@@ -82,7 +80,6 @@
     </div>
   </div>
 
-  <!-- INFO -->
   <div class="info-row">
     <div>
       <h2 class="m-title" id="mTitle">—</h2>
@@ -91,7 +88,6 @@
     <button class="bm-btn" id="bmBtn">🔖</button>
   </div>
 
-  <!-- ACTION PILLS -->
   <div class="pills-row">
     <button class="pill active" id="btnServers">▶ Servers</button>
     <button class="pill" id="btnLang">🌐 Language</button>
@@ -154,11 +150,11 @@
     <a href="#" class="nav-item"><span>🔍</span><span>Search</span></a>
     <a href="#" class="nav-item"><span>🎬</span><span>Movies</span></a>
     <a href="#" class="nav-item"><span>📺</span><span>Series</span></a>
-    <a href="#" class="nav-item"><span>✏️</span><span>Anime</span></a>
+    <a href="#" class="nav-item"><span>🎌</span><span>Anime</span></a>
   </nav>
 </div>
 
 <script src="player.js"></script>
 </body>
-               </html>
+  </html>
   
