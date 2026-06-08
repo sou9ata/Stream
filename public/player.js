@@ -1,70 +1,405 @@
-/* CineHD Hindi Streaming — player.js v2
-   Hindi-first with working multi-language embed servers
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CineHD – Movies, Series & Anime</title>
+  <style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#08090f;--sur:#111520;--sur2:#181d2c;--bdr:#1e2535;
+  --acc:#f5a623;--pur:#6c3fd4;--pur2:#8b5cf6;
+  --grn:#22c55e;--txt:#e8eaf2;--sub:#7a8499;
+}
+html,body{background:var(--bg);color:var(--txt);font-family:'Outfit',sans-serif;
+  min-height:100vh;max-width:480px;margin:0 auto;overflow-x:hidden;}
+.page{display:none;flex-direction:column;min-height:100vh;}
+.page.active{display:flex;}
+
+/* HEADER */
+.site-header{background:var(--sur);border-bottom:1px solid var(--bdr);
+  padding:10px 14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  position:sticky;top:0;z-index:100;}
+.logo{font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:2px;color:#fff;flex-shrink:0;}
+.logo span{color:var(--acc);}
+.hindi-badge{background:linear-gradient(135deg,#ff9933,#138808);color:#fff;
+  font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px;flex-shrink:0;}
+.header-search{display:flex;flex:1;min-width:150px;background:var(--sur2);
+  border:1px solid var(--bdr);border-radius:8px;overflow:hidden;}
+.header-search input{flex:1;background:none;border:none;color:var(--txt);
+  padding:8px 12px;font-size:13px;font-family:'Outfit',sans-serif;outline:none;}
+.header-search input::placeholder{color:var(--sub);}
+.header-search button{background:var(--acc);border:none;color:#000;
+  padding:0 12px;font-size:14px;cursor:pointer;}
+
+/* TABS */
+.cat-tabs{display:flex;overflow-x:auto;scrollbar-width:none;
+  background:var(--sur);border-bottom:1px solid var(--bdr);padding:0 8px;}
+.cat-tabs::-webkit-scrollbar{display:none;}
+.cat-tab{background:none;border:none;color:var(--sub);padding:10px 13px;
+  font-family:'Outfit',sans-serif;font-size:12px;font-weight:600;cursor:pointer;
+  white-space:nowrap;border-bottom:2px solid transparent;transition:all 0.2s;}
+.cat-tab.active,.cat-tab:hover{color:var(--acc);border-bottom-color:var(--acc);}
+
+/* RESULTS */
+.results-wrap{flex:1;padding:10px 12px 90px;overflow-y:auto;}
+.results-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.card{background:var(--sur2);border-radius:10px;overflow:hidden;cursor:pointer;
+  border:1px solid var(--bdr);transition:transform 0.2s,border-color 0.2s;}
+.card:hover{transform:scale(1.03);border-color:var(--acc);}
+.card img{width:100%;aspect-ratio:2/3;object-fit:cover;display:block;background:var(--sur2);}
+.card-info{padding:5px 7px 7px;}
+.card-title{font-size:11px;font-weight:600;color:var(--txt);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.card-year{font-size:10px;color:var(--sub);margin-top:2px;}
+.card-badge{display:inline-block;font-size:9px;font-weight:700;
+  padding:1px 5px;border-radius:4px;margin-top:3px;background:var(--acc);color:#000;}
+.card-badge.tv{background:var(--pur2);color:#fff;}
+.sec-title{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:1.5px;
+  color:#fff;padding:10px 0 6px;grid-column:1/-1;}
+.sec-title span{color:var(--acc);}
+
+/* LOADING */
+.load-wrap{display:flex;justify-content:center;padding:40px;grid-column:1/-1;}
+.spin{width:30px;height:30px;border:3px solid var(--bdr);
+  border-top-color:var(--acc);border-radius:50%;animation:spin 0.7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.empty-msg{display:flex;flex-direction:column;align-items:center;
+  gap:10px;padding:40px;text-align:center;color:var(--sub);font-size:28px;}
+.empty-msg p{font-size:14px;}
+
+/* TOPBAR */
+.topbar{display:flex;align-items:center;justify-content:space-between;
+  padding:10px 14px;background:rgba(8,9,15,.97);
+  position:sticky;top:0;z-index:100;border-bottom:1px solid var(--bdr);}
+.topbar-url{font-size:13px;font-weight:600;color:var(--sub);}
+.icon-btn{background:none;border:none;color:var(--txt);font-size:18px;
+  cursor:pointer;padding:6px 8px;border-radius:6px;transition:background 0.2s;}
+.icon-btn:hover{background:var(--sur2);}
+
+/* ALERT */
+.alert-bar{display:flex;align-items:center;justify-content:space-between;
+  background:linear-gradient(90deg,#b71c1c,#e53935);color:#fff;
+  padding:9px 14px;font-size:12px;font-weight:500;gap:10px;
+  transition:max-height .3s,padding .3s,opacity .3s;max-height:50px;overflow:hidden;}
+.alert-bar.hidden{max-height:0;padding:0;opacity:0;}
+.alert-bar button{background:none;border:none;color:#fff;font-size:15px;cursor:pointer;flex-shrink:0;}
+
+/* VIDEO */
+.video-wrap{background:#000;}
+.now-watching{text-align:center;font-size:12px;font-weight:600;color:var(--txt);
+  padding:6px 0;background:rgba(8,9,15,.92);}
+.video-box{position:relative;width:100%;aspect-ratio:16/9;background:#000;overflow:hidden;}
+.video-box iframe{width:100%;height:100%;border:none;display:block;}
+.v-overlay{position:absolute;inset:0;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;background:rgba(0,0,0,.82);gap:10px;}
+.v-play{font-size:48px;color:rgba(255,255,255,.4);}
+.v-overlay p{font-size:12px;color:var(--sub);}
+
+/* INFO */
+.info-row{display:flex;justify-content:space-between;align-items:flex-start;
+  padding:10px 14px 5px;background:var(--sur);border-bottom:1px solid var(--bdr);}
+.m-title{font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:1.5px;color:#fff;}
+.m-meta{font-size:11px;color:var(--sub);font-weight:500;margin-top:2px;letter-spacing:.7px;}
+.bm-btn{background:var(--sur2);border:1px solid var(--bdr);color:var(--txt);
+  font-size:17px;width:36px;height:36px;border-radius:8px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;transition:all .2s;}
+.bm-btn.on{color:var(--acc);border-color:var(--acc);}
+
+/* PILLS */
+.pills-row{display:flex;gap:8px;padding:10px 14px;
+  background:var(--sur);border-bottom:1px solid var(--bdr);overflow-x:auto;scrollbar-width:none;}
+.pills-row::-webkit-scrollbar{display:none;}
+.pill{display:flex;align-items:center;gap:5px;background:var(--sur2);
+  border:1px solid var(--bdr);color:var(--sub);padding:7px 14px;
+  border-radius:30px;font-family:'Outfit',sans-serif;font-size:12px;font-weight:600;
+  cursor:pointer;white-space:nowrap;transition:all .2s;flex-shrink:0;}
+.pill.active,.pill:hover{background:var(--acc);border-color:var(--acc);color:#000;}
+
+.overview{padding:12px 14px 100px;font-size:13px;color:var(--sub);line-height:1.6;}
+
+/* OVERLAY / SHEET */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.78);
+  z-index:500;align-items:flex-end;justify-content:center;backdrop-filter:blur(4px);}
+.overlay.open{display:flex;animation:fIn .2s ease;}
+@keyframes fIn{from{opacity:0}to{opacity:1}}
+.sheet{background:var(--sur);width:100%;max-width:480px;border-radius:18px 18px 0 0;
+  overflow:hidden;max-height:85vh;display:flex;flex-direction:column;
+  animation:sUp .28s cubic-bezier(.32,1.15,.6,1);}
+@keyframes sUp{from{transform:translateY(60px);opacity:0}to{transform:translateY(0);opacity:1}}
+.sheet-head{display:flex;align-items:center;justify-content:space-between;
+  padding:12px 16px;font-size:15px;font-weight:700;color:#fff;flex-shrink:0;
+  background:linear-gradient(90deg,var(--pur),var(--pur2));}
+.x-btn{background:rgba(0,0,0,.3);border:none;color:#fff;
+  width:26px;height:26px;border-radius:50%;font-size:13px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;}
+.lang-head{cursor:pointer;gap:10px;justify-content:flex-start;}
+.x-btn-sm{background:rgba(0,0,0,.3);border:none;color:#fff;
+  width:24px;height:24px;border-radius:50%;font-size:12px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+
+/* SERVER LIST */
+.server-list{overflow-y:auto;flex:1;padding:8px 12px;}
+.s-item{display:flex;align-items:center;gap:12px;padding:11px 13px;
+  border-radius:10px;margin-bottom:7px;cursor:pointer;
+  border:2px solid transparent;background:var(--sur2);transition:all .2s;}
+.s-item:hover{border-color:var(--pur);}
+.s-item.sel{background:var(--acc);border-color:var(--acc);}
+.s-item.sel .s-name,.s-item.sel .s-status{color:#000;}
+.s-radio{width:20px;height:20px;border-radius:50%;border:2px solid var(--bdr);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.s-item.sel .s-radio{background:#000;border-color:#000;}
+.s-dot{width:8px;height:8px;background:var(--acc);border-radius:50%;display:none;}
+.s-item.sel .s-dot{display:block;}
+.s-info{flex:1;}
+.s-name{font-size:13px;font-weight:700;color:var(--txt);}
+.s-status{font-size:11px;color:var(--grn);margin-top:2px;}
+.s-item.sel .s-status{color:#000;}
+.s-badge{font-size:10px;padding:2px 7px;border-radius:20px;
+  background:var(--sur);color:var(--sub);border:1px solid var(--bdr);}
+.s-item.sel .s-badge{background:rgba(0,0,0,.15);color:#000;border-color:rgba(0,0,0,.2);}
+.hindi-tag{font-size:9px;padding:1px 5px;border-radius:3px;
+  background:linear-gradient(135deg,#ff9933,#138808);color:#fff;font-weight:700;margin-left:4px;}
+.app-banner{display:flex;align-items:center;justify-content:space-between;
+  padding:10px 14px;background:var(--sur2);border-top:1px solid var(--bdr);flex-shrink:0;}
+.app-banner strong{font-size:13px;color:var(--txt);display:block;}
+.app-banner small{font-size:11px;color:var(--sub);}
+.app-install-btn{background:var(--acc);border:none;color:#000;font-weight:700;
+  font-size:12px;padding:8px 14px;border-radius:8px;cursor:pointer;}
+
+/* SCAN */
+.scan-wrap{padding:18px 14px;text-align:center;flex:1;overflow-y:auto;}
+.scan-title{font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:2px;color:#fff;margin-bottom:5px;}
+.scan-status{font-size:12px;color:var(--sub);margin-bottom:14px;}
+.prog-bar{width:100%;height:4px;background:var(--bdr);border-radius:2px;overflow:hidden;margin-bottom:6px;}
+.prog-fill{height:100%;background:var(--acc);border-radius:2px;width:0%;transition:width .3s;}
+.prog-nums{display:flex;justify-content:space-between;font-size:10px;
+  font-weight:700;color:var(--sub);letter-spacing:.7px;margin-bottom:16px;}
+.scan-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;}
+.sc-card{background:var(--sur2);border:1px solid var(--grn);border-radius:9px;
+  padding:9px 4px 8px;display:flex;flex-direction:column;align-items:center;gap:5px;
+  animation:pIn .3s cubic-bezier(.32,1.15,.6,1) both;}
+@keyframes pIn{from{transform:scale(.7);opacity:0}to{transform:scale(1);opacity:1}}
+.sc-check{width:22px;height:22px;background:var(--grn);border-radius:50%;
+  display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;}
+.sc-name{font-size:9px;font-weight:600;color:var(--grn);text-align:center;word-break:break-word;}
+
+/* LANG */
+.lang-info{padding:8px 14px 3px;flex-shrink:0;}
+.lang-info h3{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:1.5px;}
+.lang-info p{font-size:10px;color:var(--sub);letter-spacing:.7px;margin-top:2px;}
+.lang-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;
+  padding:10px 12px 60px;overflow-y:auto;flex:1;}
+.l-item{background:var(--sur2);border:2px solid var(--bdr);border-radius:9px;
+  padding:11px 6px 9px;display:flex;flex-direction:column;align-items:center;
+  gap:5px;cursor:pointer;transition:all .2s;position:relative;}
+.l-item:hover,.l-item.on{border-color:var(--pur2);background:rgba(139,92,246,.1);}
+.l-item.on::after{content:'✓';position:absolute;top:5px;right:7px;
+  font-size:11px;color:var(--grn);font-weight:700;}
+.l-item.hi-first{border-color:rgba(255,153,51,.4);}
+.l-item.hi-first.on{border-color:#ff9933;}
+.l-flag{font-size:22px;}
+.l-name{font-size:11px;font-weight:600;color:var(--txt);text-align:center;}
+.l-primary{font-size:9px;color:var(--acc);font-weight:700;}
+
+/* FAB */
+.fab{position:fixed;bottom:72px;right:14px;width:46px;height:46px;
+  background:#2563eb;border:none;border-radius:50%;color:#fff;font-size:20px;
+  cursor:pointer;box-shadow:0 4px 14px rgba(37,99,235,.5);z-index:400;}
+
+/* BOTTOM NAV */
+.bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);
+  width:100%;max-width:480px;background:rgba(8,9,15,.98);
+  border-top:1px solid var(--bdr);display:flex;z-index:300;backdrop-filter:blur(8px);}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;
+  padding:7px 2px;text-decoration:none;color:var(--sub);font-size:10px;font-weight:500;transition:color .2s;}
+.nav-item.active{color:var(--acc);}
+.nav-item span:first-child{font-size:18px;}
+::-webkit-scrollbar{width:3px;}
+::-webkit-scrollbar-thumb{background:var(--bdr);border-radius:2px;}
+
+</style>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+</head>
+<body>
+
+<!-- ══ HOME PAGE ══ -->
+<div id="searchPage" class="page active">
+  <header class="site-header">
+    <div class="logo">Cine<span>HD</span></div>
+    <div class="hindi-badge">🇮🇳 Hindi</div>
+    <div class="header-search">
+      <input type="text" id="searchInput" placeholder="Search movies, series, anime..." autocomplete="off"/>
+      <button id="searchBtn">🔍</button>
+    </div>
+  </header>
+
+  <div class="cat-tabs">
+    <button class="cat-tab active" data-cat="trending">🔥 Trending</button>
+    <button class="cat-tab" data-cat="bollywood">🎬 Bollywood</button>
+    <button class="cat-tab" data-cat="webseries">📺 Web Series</button>
+    <button class="cat-tab" data-cat="dubbed">🌐 Dubbed</button>
+    <button class="cat-tab" data-cat="anime">🎌 Anime</button>
+  </div>
+
+  <div class="results-wrap">
+    <div id="searchResults" class="results-grid"></div>
+    <div id="emptyMsg" class="empty-msg" style="display:none">
+      <div>😕</div><p>No results found</p>
+    </div>
+  </div>
+
+  <nav class="bottom-nav">
+    <a href="#" class="nav-item active" data-cat="trending"><span>🏠</span><span>Home</span></a>
+    <a href="#" class="nav-item" id="navSearch"><span>🔍</span><span>Search</span></a>
+    <a href="#" class="nav-item" data-cat="bollywood"><span>🎬</span><span>Movies</span></a>
+    <a href="#" class="nav-item" data-cat="webseries"><span>📺</span><span>Series</span></a>
+    <a href="#" class="nav-item" data-cat="anime"><span>🎌</span><span>Anime</span></a>
+  </nav>
+</div>
+
+<!-- ══ PLAYER PAGE ══ -->
+<div id="playerPage" class="page">
+
+  <header class="topbar">
+    <button class="icon-btn" id="backBtn">←</button>
+    <span class="topbar-url">cinehd.app</span>
+    <div style="display:flex;gap:6px">
+      <button class="icon-btn">⬆</button>
+      <button class="icon-btn">⋮</button>
+    </div>
+  </header>
+
+  <div class="alert-bar" id="alertBar">
+    <span>🔔 Server काम नहीं? दूसरा server try करें।</span>
+    <button id="alertClose">✕</button>
+  </div>
+
+  <div class="video-wrap">
+    <div class="now-watching">Now Watching: <span id="nwTitle">—</span></div>
+    <div class="video-box">
+      <iframe id="videoFrame" src="about:blank" frameborder="0" allowfullscreen
+        allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+        referrerpolicy="no-referrer"
+        sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-presentation allow-top-navigation-by-user-activation">
+      </iframe>
+      <div class="v-overlay" id="vOverlay">
+        <div class="v-play">▶</div>
+        <p>Server select करें</p>
+      </div>
+      <div class="v-overlay" id="vLoading" style="display:none">
+        <div class="spin"></div>
+        <p id="loadText">Loading...</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="info-row">
+    <div>
+      <h2 class="m-title" id="mTitle">—</h2>
+      <p class="m-meta" id="mMeta">MOVIE</p>
+    </div>
+    <button class="bm-btn" id="bmBtn">🔖</button>
+  </div>
+
+  <div class="pills-row">
+    <button class="pill active" id="btnServers">▶ Servers</button>
+    <button class="pill" id="btnLang">🌐 Language</button>
+    <button class="pill" id="btnScan">🔍 Smart Scan</button>
+  </div>
+
+  <p class="overview" id="overview"></p>
+
+  <!-- SERVER MODAL -->
+  <div class="overlay" id="serverModal">
+    <div class="sheet">
+      <div class="sheet-head">
+        <span>⚙ Select a server</span>
+        <button class="x-btn" id="closeServer">✕</button>
+      </div>
+      <div class="server-list" id="serverList"></div>
+      <div class="app-banner">
+        <div><strong>Get CineHD App</strong><br><small>For Phones &amp; TV</small></div>
+        <button class="app-install-btn">⬇ Install</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCAN MODAL -->
+  <div class="overlay" id="scanModal">
+    <div class="sheet">
+      <div class="sheet-head"><span>⚙ Select a server</span></div>
+      <div class="scan-wrap">
+        <h2 class="scan-title" id="scanTitle">—</h2>
+        <p class="scan-status" id="scanStatus">Scanning high-speed servers...</p>
+        <div class="prog-bar"><div class="prog-fill" id="progFill"></div></div>
+        <div class="prog-nums">
+          <span id="analyzed">0 ANALYZED</span>
+          <span id="remaining">41 REMAINING</span>
+        </div>
+        <div class="scan-grid" id="scanGrid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LANG MODAL -->
+  <div class="overlay" id="langModal">
+    <div class="sheet">
+      <div class="sheet-head lang-head" id="closeLang">
+        <button class="x-btn-sm">✕</button>
+        <span>Language / भाषा</span>
+      </div>
+      <div class="lang-info">
+        <h3 id="langTitle">—</h3>
+        <p id="langMeta">MOVIE</p>
+      </div>
+      <div class="lang-grid" id="langGrid"></div>
+    </div>
+  </div>
+
+  <button class="fab">🤖</button>
+
+  <nav class="bottom-nav">
+    <a href="#" class="nav-item" id="playerHome"><span>🏠</span><span>Home</span></a>
+    <a href="#" class="nav-item"><span>🔍</span><span>Search</span></a>
+    <a href="#" class="nav-item"><span>🎬</span><span>Movies</span></a>
+    <a href="#" class="nav-item"><span>📺</span><span>Series</span></a>
+    <a href="#" class="nav-item"><span>🎌</span><span>Anime</span></a>
+  </nav>
+</div>
+
+<script>
+/* CineHD v3 — player.js
+   - Direct iframe (no proxy)
+   - Working servers: vidlink.pro + vidsrc.to
+   - Anime section via Consumet
+   - Infinite scroll (IntersectionObserver)
 */
 
 const TMDB_KEY = "8265bd1679663a7ea12ac168da84d2e8";
 const TMDB     = "https://api.themoviedb.org/3";
 const IMG      = "https://image.tmdb.org/t/p/w342";
+const CONSUMET = "https://consumet-api-pink.vercel.app";
 
-// ── Language code map for embed URLs
-const LANG_MAP = {
-  hindi:   { hl:"hi", label:"Hindi",   flag:"🇮🇳" },
-  tamil:   { hl:"ta", label:"Tamil",   flag:"🇮🇳" },
-  telugu:  { hl:"te", label:"Telugu",  flag:"🇮🇳" },
-  english: { hl:"en", label:"English", flag:"🇬🇧" },
-  french:  { hl:"fr", label:"French",  flag:"🇫🇷" },
-  spanish: { hl:"es", label:"Spanish", flag:"🇪🇸" },
-  arab:    { hl:"ar", label:"Arabic",  flag:"🇸🇦" },
-  brazil:  { hl:"pt", label:"Brazil",  flag:"🇧🇷" },
-  russian: { hl:"ru", label:"Russian", flag:"🇷🇺" },
-  german:  { hl:"de", label:"German",  flag:"🇩🇪" },
-  italian: { hl:"it", label:"Italian", flag:"🇮🇹" },
-  japan:   { hl:"ja", label:"Japan",   flag:"🇯🇵" },
-  korean:  { hl:"ko", label:"Korean",  flag:"🇰🇷" },
-  chinese: { hl:"zh", label:"Chinese", flag:"🇨🇳" },
-  turkish: { hl:"tr", label:"Turkish", flag:"🇹🇷" },
-  thai:    { hl:"th", label:"Thai",    flag:"🇹🇭" },
-};
-
-// ── Servers — direct iframe (no proxy needed)
-// multiembed.mov supports &hl= for language selection
-// vidsrc.xyz supports &ds_lang= for dubbed language
+// ── Servers — direct iframe, no proxy, no ads
 const SERVERS = [
   {
-    id:"multi_hi", name:"MbPly Multi-Lang", badge:"🇮🇳", primary:true,
-    url:({id,type,s,e,hl}) => type==="tv"
-      ? `https://multiembed.mov/?video_id=${id}&tmdb=1&s=${s}&e=${e}&hl=${hl}`
-      : `https://multiembed.mov/?video_id=${id}&tmdb=1&hl=${hl}`,
+    id:"vidlink", name:"VidLink HD", badge:"4K", primary:true,
+    url:({id,type,s,e}) => type==="tv"
+      ? `https://vidlink.pro/tv/${id}/${s}/${e}?autoplay=true&title=true`
+      : `https://vidlink.pro/movie/${id}?autoplay=true&title=true`,
   },
   {
-    id:"vidsrc_xyz", name:"ZetPly Multi-Lang", badge:"HD",
-    url:({id,type,s,e,hl}) => type==="tv"
-      ? `https://vidsrc.xyz/embed/tv?tmdb=${id}&season=${s}&episode=${e}&ds_lang=${hl}`
-      : `https://vidsrc.xyz/embed/movie?tmdb=${id}&ds_lang=${hl}`,
+    id:"vidsrc", name:"VidSrc", badge:"HD",
+    url:({id,type,s,e}) => type==="tv"
+      ? `https://vidsrc.to/embed/tv/${id}/${s}/${e}`
+      : `https://vidsrc.to/embed/movie/${id}`,
   },
   {
-    id:"embed_su", name:"OrVid Multi-Lang", badge:"HD",
+    id:"embed_su", name:"EmbedSu", badge:"HD",
     url:({id,type,s,e}) => type==="tv"
       ? `https://embed.su/embed/tv/${id}/${s}/${e}`
       : `https://embed.su/embed/movie/${id}`,
-  },
-  {
-    id:"vidlink", name:"VidLink HD", badge:"4K",
-    url:({id,type,s,e}) => type==="tv"
-      ? `https://vidlink.pro/tv/${id}/${s}/${e}?autoplay=true`
-      : `https://vidlink.pro/movie/${id}?autoplay=true`,
-  },
-  {
-    id:"vidsrc_me", name:"VidSrc.me", badge:"HD",
-    url:({id,type,s,e}) => type==="tv"
-      ? `https://vidsrc.me/embed/tv?tmdb=${id}&season=${s}&episode=${e}`
-      : `https://vidsrc.me/embed/movie?tmdb=${id}`,
-  },
-  {
-    id:"twoembed", name:"2Embed", badge:"HD",
-    url:({id,type,s,e}) => type==="tv"
-      ? `https://www.2embed.cc/embedtv/${id}&s=${s}&e=${e}`
-      : `https://www.2embed.cc/embed/${id}`,
   },
   {
     id:"autoembed", name:"AutoEmbed", badge:"HD",
@@ -72,303 +407,30 @@ const SERVERS = [
       ? `https://player.autoembed.co/embed/tv/${id}/${s}/${e}`
       : `https://player.autoembed.co/embed/movie/${id}`,
   },
+];
+
+const ANIME_SERVERS = [
   {
-    id:"smash", name:"SmashyStream", badge:"HD",
-    url:({id}) => `https://embed.smashystream.com/playere.php?tmdb=${id}`,
+    id:"ani_vidlink", name:"VidLink", badge:"HD",
+    url:({epId}) => `https://vidlink.pro/anime/${epId}?autoplay=true`,
   },
 ];
 
-const SCAN_NAMES = [
-  "MbPly","ZetPly","OrVid","VidLink",
-  "2Embed","AutoEmbed","SmashyStream","VidSrc.me",
-  "VidSrc.xyz","MovPlay","CineHD","StreamX",
-];
+const SCAN_NAMES = ["VidLink","VidSrc","EmbedSu","AutoEmbed","MbPly","ZetPly","OrVid","StreamX","MovPlay","CineHD","HdSrc","FastPlay"];
 
 // ── State
-let media   = null;
-let selSvr  = "multi_hi";   // default: multiembed with Hindi
-let selLang = "hindi";       // default: Hindi
-let bm      = false;
-let scanT   = null;
-let wl      = safeGet("wl",[]);
+let media    = null;
+let animeMedia= null;
+let selSvr   = "vidlink";
+let bm       = false;
+let scanT    = null;
+let wl       = safeGet("wl",[]);
+let page     = { trending:1, bollywood:1, webseries:1, dubbed:1, anime:1 };
+let loading  = false;
+let curCat   = "trending";
+let observer = null;
 
 function safeGet(k,d){try{return JSON.parse(localStorage.getItem(k))||d;}catch{return d;}}
 function safeSet(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch{}}
 
-// ── Page / Modal helpers
-const $    = id => document.getElementById(id);
-const show = id => { document.querySelectorAll(".page").forEach(p=>p.classList.remove("active")); $(id).classList.add("active"); scrollTo(0,0); };
-const open = id => $(id).classList.add("open");
-const shut = id => $(id).classList.remove("open");
-
-// ── Build embed URL — DIRECT iframe, no proxy
-function embedUrl(srv, m, langCode) {
-  const hl = LANG_MAP[langCode]?.hl || "hi";
-  return srv.url({
-    id: m.id,
-    type: m.type,
-    s: m.season  || 1,
-    e: m.episode || 1,
-    hl,
-  });
-}
-
-// ── Load server into iframe
-function loadServer(srvId, lang) {
-  if (!media) return;
-  const srv = SERVERS.find(s => s.id === srvId);
-  if (!srv) return;
-  selSvr  = srvId;
-  selLang = lang || selLang;
-
-  $("vOverlay").style.display  = "none";
-  $("vLoading").style.display  = "flex";
-  $("loadText").textContent    = `Loading ${srv.name}...`;
-
-  $("videoFrame").src = embedUrl(srv, media, selLang);
-
-  setTimeout(() => { $("vLoading").style.display = "none"; }, 5000);
-  shut("serverModal");
-  buildServers();
-}
-
-// ── Open player
-async function openPlayer(tmdb_id, type) {
-  show("playerPage");
-  $("videoFrame").src           = "about:blank";
-  $("vOverlay").style.display   = "flex";
-  $("vLoading").style.display   = "none";
-  $("mTitle").textContent       = "Loading...";
-  $("nwTitle").textContent      = "Loading...";
-  $("overview").textContent     = "";
-
-  try {
-    const ep  = type === "tv" ? "tv" : "movie";
-    const res = await fetch(`${TMDB}/${ep}/${tmdb_id}?api_key=${TMDB_KEY}`);
-    const d   = await res.json();
-
-    const title  = d.title || d.name || "Unknown";
-    const year   = (d.release_date || d.first_air_date || "").slice(0,4);
-    const genres = (d.genres||[]).map(g=>g.name).join(", ").toUpperCase();
-
-    media = { id:tmdb_id, type, title, year, genres, season:1, episode:1 };
-
-    $("mTitle").textContent    = title;
-    $("mMeta").textContent     = `${type==="tv"?"SERIES":"MOVIE"}${genres?" • "+genres:""}`;
-    $("nwTitle").textContent   = title;
-    $("overview").textContent  = d.overview || "";
-    $("langTitle").textContent = title;
-    $("langMeta").textContent  = type==="tv"?"SERIES":"MOVIE";
-    $("scanTitle").textContent = title;
-
-    bm = wl.some(w => w.id === tmdb_id);
-    $("bmBtn").classList.toggle("on", bm);
-
-    // Auto-load Hindi server
-    loadServer(selSvr, selLang);
-  } catch(e) {
-    $("mTitle").textContent   = "Load Error";
-    $("overview").textContent = "Internet connection check करें।";
-  }
-}
-
-// ── Server list HTML
-function buildServers() {
-  $("serverList").innerHTML = SERVERS.map(s => `
-    <div class="s-item ${s.id===selSvr?"sel":""}" onclick="loadServer('${s.id}')">
-      <div class="s-radio"><div class="s-dot"></div></div>
-      <div class="s-info">
-        <div class="s-name">${s.name}${s.primary?'<span class="hindi-tag">हिंदी</span>':""}</div>
-        <div class="s-status">● Ready</div>
-      </div>
-      <span class="s-badge">${s.badge}</span>
-    </div>`).join("");
-}
-
-// ── Language grid HTML
-function buildLangs() {
-  $("langGrid").innerHTML = Object.entries(LANG_MAP).map(([code, l]) => `
-    <div class="l-item ${code===selLang?"on":""} ${["hindi","tamil","telugu"].includes(code)?"hi-first":""}"
-         onclick="pickLang('${code}')">
-      <span class="l-flag">${l.flag}</span>
-      <span class="l-name">${l.label}</span>
-      ${code==="hindi"?'<span class="l-primary">🇮🇳 Main</span>':""}
-    </div>`).join("");
-}
-
-// ── Pick language → reload with same server but new lang
-function pickLang(code) {
-  selLang = code;
-  buildLangs();
-  if (media) {
-    setTimeout(() => {
-      // For languages with hl support, use multiembed
-      // For others, keep current server
-      const useMulti = ["hindi","tamil","telugu","english","french","spanish","arab","brazil","russian","german","italian","japan","korean","chinese","turkish","thai"].includes(code);
-      const srvId = useMulti ? "multi_hi" : selSvr;
-      loadServer(srvId, code);
-      shut("langModal");
-    }, 300);
-  } else {
-    setTimeout(() => shut("langModal"), 300);
-  }
-}
-
-// ── Smart Scan
-function runScan() {
-  if (scanT) clearInterval(scanT);
-  let done=0, ci=0;
-  const T=41;
-  $("progFill").style.width  = "0%";
-  $("analyzed").textContent  = "0 ANALYZED";
-  $("remaining").textContent = T+" REMAINING";
-  $("scanStatus").textContent= "Scanning high-speed servers...";
-  $("scanGrid").innerHTML    = "";
-
-  scanT = setInterval(() => {
-    done++;
-    $("progFill").style.width  = Math.round(done/T*100)+"%";
-    $("analyzed").textContent  = done+" ANALYZED";
-    $("remaining").textContent = Math.max(0,T-done)+" REMAINING";
-    if (done%3===0 && ci<SCAN_NAMES.length) {
-      const c = document.createElement("div");
-      c.className = "sc-card";
-      c.innerHTML = `<div class="sc-check">✓</div><div class="sc-name">${SCAN_NAMES[ci]}</div>`;
-      $("scanGrid").appendChild(c);
-      ci++;
-    }
-    if (done>=T){ clearInterval(scanT); $("scanStatus").textContent=`✅ ${ci} servers found!`; }
-  }, 110);
-}
-
-// ── TMDb fetch helpers
-async function tmdbSearch(q) {
-  const r = await fetch(`${TMDB}/search/multi?api_key=${TMDB_KEY}&query=${encodeURIComponent(q)}&include_adult=false`);
-  const d = await r.json();
-  return (d.results||[]).filter(x => x.media_type==="movie"||x.media_type==="tv");
-}
-
-async function tmdbCat(cat) {
-  const urls = {
-    trending : `${TMDB}/trending/all/week?api_key=${TMDB_KEY}`,
-    bollywood: `${TMDB}/discover/movie?api_key=${TMDB_KEY}&with_original_language=hi&sort_by=popularity.desc`,
-    webseries: `${TMDB}/discover/tv?api_key=${TMDB_KEY}&with_original_language=hi&sort_by=popularity.desc`,
-    dubbed   : `${TMDB}/trending/movie/week?api_key=${TMDB_KEY}`,
-  };
-  const r = await fetch(urls[cat]);
-  const d = await r.json();
-  return (d.results||[]).slice(0,18).map(x=>({...x, media_type:x.media_type||(x.first_air_date?"tv":"movie")}));
-}
-
-// ── Render
-function renderGrid(items, label) {
-  const g=$("searchResults"), e=$("emptyMsg");
-  e.style.display="none";
-  if (!items.length){ g.innerHTML=""; e.style.display="flex"; return; }
-
-  const lb = label ? `<div class="sec-title" style="grid-column:1/-1">${label}</div>` : "";
-  const BLANK = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='150'%3E%3Crect fill='%23181d2c' width='100' height='150'/%3E%3Ctext fill='%237a8499' x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-size='26'%3E🎬%3C/text%3E%3C/svg%3E`;
-
-  g.innerHTML = lb + items.map(x => {
-    const title = (x.title||x.name||"Unknown").replace(/"/g,"&quot;");
-    const year  = (x.release_date||x.first_air_date||"").slice(0,4);
-    const poster= x.poster_path ? IMG+x.poster_path : BLANK;
-    const type  = x.media_type||"movie";
-    const isHI  = x.original_language==="hi";
-    return `
-      <div class="card" onclick="openPlayer(${x.id},'${type}')">
-        <img src="${poster}" alt="${title}" loading="lazy" onerror="this.src='${BLANK}'"/>
-        <div class="card-info">
-          <div class="card-title">${title}</div>
-          <div class="card-year">${year}${isHI?" 🇮🇳":""}</div>
-          <span class="card-badge ${type==="tv"?"tv":""}">${type==="tv"?"TV":"MOVIE"}</span>
-        </div>
-      </div>`;
-  }).join("");
-}
-
-function showSpinner() {
-  $("searchResults").innerHTML=`<div class="load-wrap" style="grid-column:1/-1"><div class="spin"></div></div>`;
-  $("emptyMsg").style.display="none";
-}
-
-async function loadCat(cat) {
-  showSpinner();
-  const labels={trending:"🔥 Trending This Week",bollywood:"🎬 Bollywood Hindi Movies",webseries:"📺 Hindi Web Series",dubbed:"🌐 Dubbed Movies"};
-  renderGrid(await tmdbCat(cat), labels[cat]||"");
-}
-
-// ── Events
-
-// Search
-let sTimer;
-$("searchInput").addEventListener("input", function(){
-  clearTimeout(sTimer);
-  const q = this.value.trim();
-  if(!q){ loadCat("trending"); return; }
-  sTimer = setTimeout(async()=>{ showSpinner(); renderGrid(await tmdbSearch(q)); }, 400);
-});
-$("searchBtn").addEventListener("click", async()=>{
-  const q = $("searchInput").value.trim();
-  if(!q) return;
-  showSpinner(); renderGrid(await tmdbSearch(q));
-});
-$("searchInput").addEventListener("keydown", e=>{ if(e.key==="Enter") $("searchBtn").click(); });
-
-// Category tabs
-document.querySelectorAll(".cat-tab").forEach(t=>{
-  t.addEventListener("click", function(){
-    document.querySelectorAll(".cat-tab").forEach(x=>x.classList.remove("active"));
-    this.classList.add("active");
-    loadCat(this.dataset.cat);
-  });
-});
-
-// Bottom nav (home page)
-document.querySelectorAll("#searchPage .nav-item[data-cat]").forEach(n=>{
-  n.addEventListener("click", function(e){
-    e.preventDefault();
-    document.querySelectorAll("#searchPage .nav-item").forEach(x=>x.classList.remove("active"));
-    this.classList.add("active");
-    const cat = this.dataset.cat;
-    if(cat) loadCat(cat);
-    document.querySelectorAll(".cat-tab").forEach(t=>{
-      t.classList.toggle("active", t.dataset.cat===cat);
-    });
-  });
-});
-
-// Player buttons
-$("btnServers").addEventListener("click", ()=>{ buildServers(); open("serverModal"); });
-$("closeServer").addEventListener("click", ()=>shut("serverModal"));
-$("btnLang").addEventListener("click", ()=>{ buildLangs(); open("langModal"); });
-$("closeLang").addEventListener("click", ()=>shut("langModal"));
-$("btnScan").addEventListener("click", ()=>{ open("scanModal"); runScan(); });
-
-// Alert
-$("alertClose").addEventListener("click", ()=>$("alertBar").classList.add("hidden"));
-
-// Bookmark
-$("bmBtn").addEventListener("click", function(){
-  if(!media) return;
-  bm = !bm;
-  this.classList.toggle("on", bm);
-  if(bm) wl.push({id:media.id,type:media.type,title:media.title});
-  else    wl = wl.filter(w=>w.id!==media.id);
-  safeSet("wl", wl);
-});
-
-// Back
-$("backBtn").addEventListener("click", ()=>{ $("videoFrame").src="about:blank"; show("searchPage"); });
-$("playerHome").addEventListener("click", e=>{ e.preventDefault(); $("videoFrame").src="about:blank"; show("searchPage"); });
-
-// Close overlays on backdrop click
-["serverModal","scanModal","langModal"].forEach(id=>{
-  $(id).addEventListener("click", function(e){
-    if(e.target===this){ if(id==="scanModal"&&scanT) clearInterval(scanT); shut(id); }
-  });
-});
-
-// ── Init — load Hindi trending by default
-loadCat("trending");
-     
+cons
