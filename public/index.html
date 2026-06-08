@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CineHD – Hindi Movies & Web Series</title>
+  <link rel="stylesheet" href="player.css"/>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+</head>
+<body>
+
+<!-- ══ HOME PAGE ══ -->
+<div id="searchPage" class="page active">
+  <header class="site-header">
+    <div class="logo">Cine<span>HD</span></div>
+    <div class="hindi-badge">🇮🇳 Hindi</div>
+    <div class="header-search">
+      <input type="text" id="searchInput" placeholder="Search Hindi movies, series..." autocomplete="off"/>
+      <button id="searchBtn">🔍</button>
+    </div>
+  </header>
+
+  <div class="cat-tabs">
+    <button class="cat-tab active" data-cat="trending">🔥 Trending</button>
+    <button class="cat-tab" data-cat="bollywood">🎬 Bollywood</button>
+    <button class="cat-tab" data-cat="webseries">📺 Web Series</button>
+    <button class="cat-tab" data-cat="dubbed">🌐 Dubbed</button>
+  </div>
+
+  <div class="results-wrap">
+    <div id="searchResults" class="results-grid"></div>
+    <div id="emptyMsg" class="empty-msg" style="display:none">
+      <div>😕</div><p>No results found</p>
+    </div>
+  </div>
+
+  <nav class="bottom-nav">
+    <a href="#" class="nav-item active" data-cat="trending"><span>🏠</span><span>Home</span></a>
+    <a href="#" class="nav-item" id="navSearch"><span>🔍</span><span>Search</span></a>
+    <a href="#" class="nav-item" data-cat="bollywood"><span>🎬</span><span>Movies</span></a>
+    <a href="#" class="nav-item" data-cat="webseries"><span>📺</span><span>Series</span></a>
+    <a href="#" class="nav-item" data-cat="dubbed"><span>✏️</span><span>Dubbed</span></a>
+  </nav>
+</div>
+
+<!-- ══ PLAYER PAGE ══ -->
+<div id="playerPage" class="page">
+
+  <header class="topbar">
+    <button class="icon-btn" id="backBtn">←</button>
+    <span class="topbar-url">cinehd.app</span>
+    <div style="display:flex;gap:6px">
+      <button class="icon-btn">⬆</button>
+      <button class="icon-btn">⋮</button>
+    </div>
+  </header>
+
+  <div class="alert-bar" id="alertBar">
+    <span>🔔 Server काम नहीं? दूसरा server try करें।</span>
+    <button id="alertClose">✕</button>
+  </div>
+
+  <!-- VIDEO -->
+  <div class="video-wrap">
+    <div class="now-watching">Now Watching: <span id="nwTitle">—</span></div>
+    <div class="video-box">
+      <iframe id="videoFrame" src="about:blank" frameborder="0" allowfullscreen
+        allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+        referrerpolicy="no-referrer"
+        sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-presentation allow-top-navigation-by-user-activation">
+      </iframe>
+      <!-- Placeholder -->
+      <div class="v-overlay" id="vOverlay">
+        <div class="v-play">▶</div>
+        <p>Server select करें</p>
+      </div>
+      <!-- Loading -->
+      <div class="v-overlay" id="vLoading" style="display:none">
+        <div class="spin"></div>
+        <p id="loadText">Loading...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- INFO -->
+  <div class="info-row">
+    <div>
+      <h2 class="m-title" id="mTitle">—</h2>
+      <p class="m-meta" id="mMeta">MOVIE</p>
+    </div>
+    <button class="bm-btn" id="bmBtn">🔖</button>
+  </div>
+
+  <!-- ACTION PILLS -->
+  <div class="pills-row">
+    <button class="pill active" id="btnServers">▶ Servers</button>
+    <button class="pill" id="btnLang">🌐 Language</button>
+    <button class="pill" id="btnScan">🔍 Smart Scan</button>
+  </div>
+
+  <p class="overview" id="overview"></p>
+
+  <!-- SERVER MODAL -->
+  <div class="overlay" id="serverModal">
+    <div class="sheet">
+      <div class="sheet-head">
+        <span>⚙ Select a server</span>
+        <button class="x-btn" id="closeServer">✕</button>
+      </div>
+      <div class="server-list" id="serverList"></div>
+      <div class="app-banner">
+        <div><strong>Get CineHD App</strong><br><small>For Phones &amp; TV</small></div>
+        <button class="app-install-btn">⬇ Install</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCAN MODAL -->
+  <div class="overlay" id="scanModal">
+    <div class="sheet">
+      <div class="sheet-head"><span>⚙ Select a server</span></div>
+      <div class="scan-wrap">
+        <h2 class="scan-title" id="scanTitle">—</h2>
+        <p class="scan-status" id="scanStatus">Scanning high-speed servers...</p>
+        <div class="prog-bar"><div class="prog-fill" id="progFill"></div></div>
+        <div class="prog-nums">
+          <span id="analyzed">0 ANALYZED</span>
+          <span id="remaining">41 REMAINING</span>
+        </div>
+        <div class="scan-grid" id="scanGrid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LANG MODAL -->
+  <div class="overlay" id="langModal">
+    <div class="sheet">
+      <div class="sheet-head lang-head" id="closeLang">
+        <button class="x-btn-sm">✕</button>
+        <span>Language / भाषा</span>
+      </div>
+      <div class="lang-info">
+        <h3 id="langTitle">—</h3>
+        <p id="langMeta">MOVIE</p>
+      </div>
+      <div class="lang-grid" id="langGrid"></div>
+    </div>
+  </div>
+
+  <button class="fab">🤖</button>
+
+  <nav class="bottom-nav">
+    <a href="#" class="nav-item" id="playerHome"><span>🏠</span><span>Home</span></a>
+    <a href="#" class="nav-item"><span>🔍</span><span>Search</span></a>
+    <a href="#" class="nav-item"><span>🎬</span><span>Movies</span></a>
+    <a href="#" class="nav-item"><span>📺</span><span>Series</span></a>
+    <a href="#" class="nav-item"><span>✏️</span><span>Anime</span></a>
+  </nav>
+</div>
+
+<script src="player.js"></script>
+</body>
+               </html>
+  
